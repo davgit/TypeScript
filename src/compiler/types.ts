@@ -2635,8 +2635,6 @@ namespace ts {
 
         /* @internal */ getJsxNamespace(): string;
         /* @internal */ resolveNameAtLocation(location: Node, name: string, meaning: SymbolFlags): Symbol | undefined;
-
-        /* @internal */ createSignatureInstantiation(signature: Signature, typeArguments: Type[]): Signature;
     }
 
     export enum NodeBuilderFlags {
@@ -3366,6 +3364,8 @@ namespace ts {
         typePredicate?: TypePredicate;
         /* @internal */
         instantiations?: Map<Signature>;    // Generic signature instantiation cache
+        /* @internal */
+        inferredAnyDefault?: boolean; //rename
     }
 
     export const enum IndexKind {

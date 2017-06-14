@@ -5,6 +5,6 @@
 ////f<I>({ /**/
 
 goTo.marker();
-verify.currentSignatureHelpIs("a");
+verify.currentSignatureHelpIs("f(x: I, y: number): void");
 debug.printCurrentSignatureHelp();
 //debug.printCompletionListMembers();

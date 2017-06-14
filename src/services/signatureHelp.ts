@@ -407,7 +407,8 @@ namespace ts.SignatureHelp {
         const callTargetSymbol = typeChecker.getSymbolAtLocation(callTarget);
         const callTargetDisplayParts = callTargetSymbol && symbolToDisplayParts(typeChecker, callTargetSymbol, /*enclosingDeclaration*/ undefined, /*meaning*/ undefined);
         const items: SignatureHelpItem[] = map(candidates, (candidateSignature, index) => {
-            if (index === selectedItemIndex) {
+            const genericSignature = candidateSignature;
+            if (index === selectedItemIndex && !typeChecker.isUnknownSignature(bestSignature) && !bestSignature.inferredAnyDefault) {//perf
                 // `bestSignature` may be instantiated, so use that instead of the generic `candidateSignature`.
                 candidateSignature = bestSignature;
             }
@@ -424,7 +425,7 @@ namespace ts.SignatureHelp {
             if (isTypeParameterList) {
                 isVariadic = false; // type parameter lists are not variadic
                 prefixDisplayParts.push(punctuationPart(SyntaxKind.LessThanToken));
-                const typeParameters = candidateSignature.typeParameters;
+                const typeParameters = genericSignature.typeParameters;
                 signatureHelpParameters = typeParameters && typeParameters.length > 0 ? map(typeParameters, createSignatureHelpParameterForTypeParameter) : emptyArray;
                 suffixDisplayParts.push(punctuationPart(SyntaxKind.GreaterThanToken));
                 const parameterParts = mapToDisplayParts(writer =>
