@@ -395,7 +395,7 @@ namespace ts.SignatureHelp {
         const { argumentCount, argumentsSpan: applicableSpan, invocation, argumentIndex } = argumentListInfo;
         const isTypeParameterList = argumentListInfo.kind === ArgumentListKind.TypeArguments;
 
-        const maybeUseInstantiatedGeneric = !typeChecker.isUnknownSignature(bestSignature) && !bestSignature.inferredAnyDefault;
+        const maybeUseInstantiatedGeneric = !typeChecker.isUnknownSignature(bestSignature) && !bestSignature.inferredAnyDefaultTypeArgument;
         let selectedItemIndex = candidates.indexOf(bestSignature);
         if (selectedItemIndex < 0) {
             selectedItemIndex = selectBestInvalidOverloadIndex(candidates, argumentCount);
