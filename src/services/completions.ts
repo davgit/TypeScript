@@ -229,19 +229,18 @@ namespace ts.Completions {
         const entries: CompletionEntry[] = [];
         const uniques = createMap<true>();
 
-        //resolvedSignature may be an instantiated generic signature.
         const resolvedSignature = typeChecker.getResolvedSignature(argumentInfo.invocation, candidates);
-        const resolvedSignatureIsUnknown = typeChecker.isUnknownSignature(resolvedSignature);
 
-        if (!resolvedSignatureIsUnknown) foo(resolvedSignature);
+        // resolvedSignature may be an instantiated generic signature, while the associated candidate will still be generic.
+        addCompletionsForSignature(resolvedSignature);
 
         for (const candidate of candidates) {
-            if (resolvedSignatureIsUnknown || candidate !== resolvedSignature) {
-                foo(candidate);
+            if (candidate !== resolvedSignature) {
+                addCompletionsForSignature(candidate);
             }
         }
 
-        function foo(sig: Signature) { //name
+        function addCompletionsForSignature(sig: Signature): void {
             const type = typeChecker.getParameterType(sig, argumentInfo.argumentIndex);
             addStringLiteralCompletionsFromType(type, entries, typeChecker, uniques);
         }
