@@ -5441,8 +5441,7 @@ namespace ts {
                 const minTypeArgumentCount = getMinTypeArgumentCount(baseSig.typeParameters);
                 const typeParamCount = length(baseSig.typeParameters);
                 if ((isJavaScript || typeArgCount >= minTypeArgumentCount) && typeArgCount <= typeParamCount) {
-                    const { typeArguments: filledTypeArguments, inferredAnyDefault } = fillMissingTypeArguments(typeArguments, baseSig.typeParameters, minTypeArgumentCount, baseTypeNode);
-                    const sig = typeParamCount ? createSignatureInstantiation(baseSig, filledTypeArguments, inferredAnyDefault) : cloneSignature(baseSig);
+                    const sig = typeParamCount ? createSignatureInstantiation(baseSig, fillMissingTypeArguments(typeArguments, baseSig.typeParameters, minTypeArgumentCount, baseTypeNode);) : cloneSignature(baseSig);
                     sig.typeParameters = classType.localTypeParameters;
                     sig.resolvedReturnType = classType;
                     result.push(sig);
@@ -6570,12 +6569,12 @@ namespace ts {
             const id = getTypeListId(typeArguments);
             let instantiation = instantiations.get(id);
             if (!instantiation) {
-                instantiations.set(id, instantiation = createSignatureInstantiation(signature, typeArguments, inferredAnyDefault));
+                instantiations.set(id, instantiation = createSignatureInstantiation(signature, { typeArguments, inferredAnyDefault }));
             }
             return instantiation;
         }
 
-        function createSignatureInstantiation(signature: Signature, typeArguments: Type[], inferredAnyDefault: boolean): Signature {
+        function createSignatureInstantiation(signature: Signature, { typeArguments, inferredAnyDefault }: { typeArguments: Type[], inferredAnyDefault: boolean }): Signature {
             return instantiateSignature(signature, createTypeMapper(signature.typeParameters, typeArguments), /*eraseTypeParameters*/ true, inferredAnyDefault);
         }
 
