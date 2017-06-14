@@ -6320,13 +6320,8 @@ namespace ts {
                     for (let i = numTypeArguments; i < numTypeParameters; i++) {
                         const mapper = createTypeMapper(typeParameters, typeArguments);
                         const defaultType = getDefaultFromTypeParameter(typeParameters[i]);
-                        if (defaultType) {
-                            typeArguments[i] = instantiateType(defaultType, mapper);
-                        }
-                        else {
-                            inferredAnyDefault = true; //Should this always be set???
-                            typeArguments[i] = getDefaultType(isJavaScript);
-                        }
+                        inferredAnyDefault = true; //Should this always be set???
+                        typeArguments[i] = defaultType ? instantiateType(defaultType, mapper) : getDefaultType(isJavaScript);
                     }
                 }
             }
@@ -10625,6 +10620,7 @@ namespace ts {
                     inferredType = silentNeverType;
                 }
                 else {
+                    inferredDefault = true;
                     // Infer either the default or the empty object type when no inferences were
                     // made. It is important to remember that in this case, inference still
                     // succeeds, meaning there is no error for not having inference candidates. An
@@ -10640,10 +10636,6 @@ namespace ts {
                                 context));
                     }
                     else {
-                        //!
-                        //!!
-                        //!!!
-                        inferredDefault = true;
                         inferredType = getDefaultType(!!(context.flags & InferenceFlags.AnyDefault));
                     }
                 }
