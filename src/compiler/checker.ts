@@ -6286,8 +6286,7 @@ namespace ts {
             return minTypeArgumentCount;
         }
 
-        //foo
-        function justFillMissingTypeArguments(typeArguments: Type[] | undefined, typeParameters: TypeParameter[] | undefined, minTypeArgumentCount: number, location?: Node): Type[] {
+        function fillMissingTypeArgumentsAndIgnoreDefaults(typeArguments: Type[] | undefined, typeParameters: TypeParameter[] | undefined, minTypeArgumentCount: number, location?: Node): Type[] {
             return fillMissingTypeArguments(typeArguments, typeParameters, minTypeArgumentCount, location).typeArguments;
         }
 
@@ -6320,7 +6319,7 @@ namespace ts {
                     for (let i = numTypeArguments; i < numTypeParameters; i++) {
                         const mapper = createTypeMapper(typeParameters, typeArguments);
                         const defaultType = getDefaultFromTypeParameter(typeParameters[i]);
-                        inferredAnyDefault = true; //Should this always be set???
+                        inferredAnyDefault = true;
                         typeArguments[i] = defaultType ? instantiateType(defaultType, mapper) : getDefaultType(isJavaScript);
                     }
                 }
@@ -6573,7 +6572,6 @@ namespace ts {
             return instantiation;
         }
 
-        //!
         function createSignatureInstantiation(signature: Signature, typeArguments: Type[], inferredAnyDefault: boolean): Signature {
             return instantiateSignature(signature, createTypeMapper(signature.typeParameters, typeArguments), /*eraseTypeParameters*/ true, inferredAnyDefault);
         }
@@ -6747,7 +6745,7 @@ namespace ts {
                 // In a type reference, the outer type parameters of the referenced class or interface are automatically
                 // supplied as type arguments and the type reference only specifies arguments for the local type parameters
                 // of the class or interface.
-                const typeArguments = concatenate(type.outerTypeParameters, justFillMissingTypeArguments(typeArgs, typeParameters, minTypeArgumentCount, node));
+                const typeArguments = concatenate(type.outerTypeParameters, fillMissingTypeArgumentsAndIgnoreDefaults(typeArgs, typeParameters, minTypeArgumentCount, node));
                 return createTypeReference(<GenericType>type, typeArguments);
             }
             if (node.typeArguments) {
@@ -6764,7 +6762,7 @@ namespace ts {
             const id = getTypeListId(typeArguments);
             let instantiation = links.instantiations.get(id);
             if (!instantiation) {
-                links.instantiations.set(id, instantiation = instantiateTypeNoAlias(type, createTypeMapper(typeParameters, justFillMissingTypeArguments(typeArguments, typeParameters, getMinTypeArgumentCount(typeParameters)))));
+                links.instantiations.set(id, instantiation = instantiateTypeNoAlias(type, createTypeMapper(typeParameters, fillMissingTypeArgumentsAndIgnoreDefaults(typeArguments, typeParameters, getMinTypeArgumentCount(typeParameters)))));
             }
             return instantiation;
         }
@@ -10593,7 +10591,6 @@ namespace ts {
             return constraint && maybeTypeOfKind(constraint, TypeFlags.Primitive | TypeFlags.Index);
         }
 
-        //!
         function getInferredType(context: InferenceContext, index: number): { inferredType: Type, inferredDefault: boolean } {
             const inference = context.inferences[index];
             let inferredType = inference.inferredType;
@@ -10652,9 +10649,8 @@ namespace ts {
             return { inferredType, inferredDefault };
         }
 
-        //mv, name
-        function getDefaultType(cond: boolean) {
-            return cond ? anyType : emptyObjectType;
+        function getDefaultType(isInJavaScriptFile: boolean): Type {
+            return isInJavaScriptFile ? anyType : emptyObjectType;
         }
 
         function getInferredTypes(context: InferenceContext): { inferredTypes: Type[], inferredAnyDefault: boolean } {
@@ -14973,7 +14969,6 @@ namespace ts {
             return getSignatureInstantiation(signature, inferredTypes, inferredAnyDefault);
         }
 
-        //!
         function inferTypeArguments(node: CallLikeExpression, signature: Signature, args: Expression[], excludeArgument: boolean[], context: InferenceContext): { inferredTypes: Type[], inferredAnyDefault: boolean } {
             // Clear out all the inference results from the last time inferTypeArguments was called on this context
             for (const inference of context.inferences) {
@@ -18420,7 +18415,7 @@ namespace ts {
                 const constraint = getConstraintOfTypeParameter(typeParameters[i]);
                 if (constraint) {
                     if (!typeArguments) {
-                        typeArguments = justFillMissingTypeArguments(map(typeArgumentNodes, getTypeFromTypeNode), typeParameters, minTypeArgumentCount);
+                        typeArguments = fillMissingTypeArgumentsAndIgnoreDefaults(map(typeArgumentNodes, getTypeFromTypeNode), typeParameters, minTypeArgumentCount);
                         mapper = createTypeMapper(typeParameters, typeArguments);
                     }
                     const typeArgument = typeArguments[i];

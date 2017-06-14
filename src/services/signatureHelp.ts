@@ -15,6 +15,7 @@ namespace ts.SignatureHelp {
         invocation: CallLikeExpression;
         argumentsSpan: TextSpan;
         argumentIndex?: number;
+        /** argumentCount is the *apparent* number of arguments. */
         argumentCount: number;
     }
 
@@ -391,28 +392,19 @@ namespace ts.SignatureHelp {
     }
 
     function createSignatureHelpItems(candidates: Signature[], bestSignature: Signature, argumentListInfo: ArgumentListInfo, typeChecker: TypeChecker): SignatureHelpItems {
-        const applicableSpan = argumentListInfo.argumentsSpan;
+        const { argumentCount, argumentsSpan: applicableSpan, invocation, argumentIndex } = argumentListInfo;
         const isTypeParameterList = argumentListInfo.kind === ArgumentListKind.TypeArguments;
 
-        // argumentCount is the *apparent* number of arguments.
-        const argumentCount = argumentListInfo.argumentCount; //inline?
-
+        const maybeUseInstantiatedGeneric = !typeChecker.isUnknownSignature(bestSignature) && !bestSignature.inferredAnyDefault;
         let selectedItemIndex = candidates.indexOf(bestSignature);
         if (selectedItemIndex < 0) {
             selectedItemIndex = selectBestInvalidOverloadIndex(candidates, argumentCount);
         }
 
-        const invocation = argumentListInfo.invocation;
         const callTarget = getInvokedExpression(invocation);
         const callTargetSymbol = typeChecker.getSymbolAtLocation(callTarget);
         const callTargetDisplayParts = callTargetSymbol && symbolToDisplayParts(typeChecker, callTargetSymbol, /*enclosingDeclaration*/ undefined, /*meaning*/ undefined);
         const items: SignatureHelpItem[] = map(candidates, (candidateSignature, index) => {
-            const genericSignature = candidateSignature;
-            if (index === selectedItemIndex && !typeChecker.isUnknownSignature(bestSignature) && !bestSignature.inferredAnyDefault) {//perf
-                // `bestSignature` may be instantiated, so use that instead of the generic `candidateSignature`.
-                candidateSignature = bestSignature;
-            }
-
             let signatureHelpParameters: SignatureHelpParameter[];
             const prefixDisplayParts: SymbolDisplayPart[] = [];
             const suffixDisplayParts: SymbolDisplayPart[] = [];
@@ -425,7 +417,7 @@ namespace ts.SignatureHelp {
             if (isTypeParameterList) {
                 isVariadic = false; // type parameter lists are not variadic
                 prefixDisplayParts.push(punctuationPart(SyntaxKind.LessThanToken));
-                const typeParameters = genericSignature.typeParameters;
+                const typeParameters = candidateSignature.typeParameters;
                 signatureHelpParameters = typeParameters && typeParameters.length > 0 ? map(typeParameters, createSignatureHelpParameterForTypeParameter) : emptyArray;
                 suffixDisplayParts.push(punctuationPart(SyntaxKind.GreaterThanToken));
                 const parameterParts = mapToDisplayParts(writer =>
@@ -433,14 +425,16 @@ namespace ts.SignatureHelp {
                 addRange(suffixDisplayParts, parameterParts);
             }
             else {
+                // `bestSignature` may be instantiated, so use that instead of the generic `candidateSignature`.
+                if (index === selectedItemIndex && maybeUseInstantiatedGeneric) candidateSignature = bestSignature;
+
                 isVariadic = candidateSignature.hasRestParameter;
                 const typeParameterParts = mapToDisplayParts(writer =>
                     typeChecker.getSymbolDisplayBuilder().buildDisplayForTypeParametersAndDelimiters(candidateSignature.typeParameters, writer, invocation));
                 addRange(prefixDisplayParts, typeParameterParts);
                 prefixDisplayParts.push(punctuationPart(SyntaxKind.OpenParenToken));
 
-                const parameters = candidateSignature.parameters;
-                signatureHelpParameters = parameters.length > 0 ? map(parameters, createSignatureHelpParameterForParameter) : emptyArray;
+                signatureHelpParameters = map(candidateSignature.parameters, createSignatureHelpParameterForParameter);
                 suffixDisplayParts.push(punctuationPart(SyntaxKind.CloseParenToken));
             }
 
@@ -459,7 +453,6 @@ namespace ts.SignatureHelp {
             };
         });
 
-        const argumentIndex = argumentListInfo.argumentIndex;
         Debug.assert(argumentIndex === 0 || argumentIndex < argumentCount, `argumentCount < argumentIndex, ${argumentCount} < ${argumentIndex}`);
 
         return {
