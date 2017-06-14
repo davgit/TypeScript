@@ -3366,7 +3366,7 @@ namespace ts {
         instantiations?: Map<Signature>;    // Generic signature instantiation cache
         /* @internal */
         /** True if this is an instantiated signature, and the default for a type parameter (either an explicit type, or `{}`) was inferred. */
-        inferredAnyDefault?: boolean;
+        inferredAnyDefaultTypeArgument?: boolean;
     }
 
     export const enum IndexKind {

@@ -6298,7 +6298,7 @@ namespace ts {
          * @param typeParameters The requested type parameters.
          * @param minTypeArgumentCount The minimum number of required type arguments.
          */
-        function fillMissingTypeArguments(typeArguments: Type[] | undefined, typeParameters: TypeParameter[] | undefined, minTypeArgumentCount: number, location?: Node): { typeArguments: Type[], inferredAnyDefault: boolean } {
+        function fillMissingTypeArguments(typeArguments: Type[] | undefined, typeParameters: TypeParameter[] | undefined, minTypeArgumentCount: number, location?: Node): { typeArguments: Type[] | undefined, inferredAnyDefault: boolean } {
             const numTypeParameters = length(typeParameters);
             let inferredAnyDefault = false;
             if (numTypeParameters) {
@@ -6309,18 +6309,20 @@ namespace ts {
                         typeArguments = [];
                     }
 
-                    // Map an unsatisfied type parameter with a default type.
-                    // If a type parameter does not have a default type, or if the default type
-                    // is a forward reference, the empty object type is used.
-                    for (let i = numTypeArguments; i < numTypeParameters; i++) {
+                    if (numTypeArguments < numTypeParameters) {
                         inferredAnyDefault = true;
-                        typeArguments[i] = getDefaultType(isJavaScript);
-                    }
-                    for (let i = numTypeArguments; i < numTypeParameters; i++) {
-                        const mapper = createTypeMapper(typeParameters, typeArguments);
-                        const defaultType = getDefaultFromTypeParameter(typeParameters[i]);
-                        inferredAnyDefault = true;
-                        typeArguments[i] = defaultType ? instantiateType(defaultType, mapper) : getDefaultType(isJavaScript);
+
+                        // Map an unsatisfied type parameter with a default type.
+                        // If a type parameter does not have a default type, or if the default type
+                        // is a forward reference, the empty object type is used.
+                        for (let i = numTypeArguments; i < numTypeParameters; i++) {
+                            typeArguments[i] = getDefaultType(isJavaScript);
+                        }
+                        for (let i = numTypeArguments; i < numTypeParameters; i++) {
+                            const mapper = createTypeMapper(typeParameters, typeArguments);
+                            const defaultType = getDefaultFromTypeParameter(typeParameters[i]);
+                            typeArguments[i] = defaultType ? instantiateType(defaultType, mapper) : getDefaultType(isJavaScript);
+                        }
                     }
                 }
             }
@@ -6560,9 +6562,10 @@ namespace ts {
         }
 
         function getSignatureInstantiation(signature: Signature, typeArguments: Type[], inferredAnyDefault?: boolean): Signature {
-            const { typeArguments: filledTypeArguments, inferredAnyDefault: iad } = fillMissingTypeArguments(typeArguments, signature.typeParameters, getMinTypeArgumentCount(signature.typeParameters)); //name iad
+            const { typeArguments: filledTypeArguments, inferredAnyDefault: inferredMissingTypeArgument } = fillMissingTypeArguments(typeArguments, signature.typeParameters, getMinTypeArgumentCount(signature.typeParameters)); //name iad
             typeArguments = filledTypeArguments;
-            inferredAnyDefault = inferredAnyDefault || iad;
+            inferredAnyDefault = inferredAnyDefault || inferredMissingTypeArgument;
+
             const instantiations = signature.instantiations || (signature.instantiations = createMap<Signature>());
             const id = getTypeListId(typeArguments);
             let instantiation = instantiations.get(id);
@@ -8066,7 +8069,7 @@ namespace ts {
                 /*resolvedReturnType*/ undefined,
                 freshTypePredicate,
                 signature.minArgumentCount, signature.hasRestParameter, signature.hasLiteralTypes);
-            result.inferredAnyDefault = !!inferredAnyDefault;
+            result.inferredAnyDefaultTypeArgument = !!inferredAnyDefault;
             result.target = signature;
             result.mapper = mapper;
             return result;
@@ -10211,7 +10214,7 @@ namespace ts {
                 for (let i = 0; i < inferences.length; i++) {
                     if (t === inferences[i].typeParameter) {
                         inferences[i].isFixed = true;
-                        return getInferredType(context, i).inferredType; //Use .inferredDefault?
+                        return getInferredType(context, i).inferredType;
                     }
                 }
                 return t;
