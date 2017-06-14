@@ -2582,12 +2582,15 @@ namespace ts {
         getAugmentedPropertiesOfType(type: Type): Symbol[];
         getRootSymbols(symbol: Symbol): Symbol[];
         getContextualType(node: Expression): Type | undefined;
+        // returns unknownSignature in the case of an error.
+        // Don't know when it returns undefined.
         getResolvedSignature(node: CallLikeExpression, candidatesOutArray?: Signature[]): Signature | undefined;
         getSignatureFromDeclaration(declaration: SignatureDeclaration): Signature | undefined;
         isImplementationOfOverload(node: FunctionLikeDeclaration): boolean | undefined;
         isUndefinedSymbol(symbol: Symbol): boolean;
         isArgumentsSymbol(symbol: Symbol): boolean;
         isUnknownSymbol(symbol: Symbol): boolean;
+        /* @internal */ isUnknownSignature(signature: Signature): boolean;
         /* @internal */ getMergedSymbol(symbol: Symbol): Symbol;
 
         getConstantValue(node: EnumMember | PropertyAccessExpression | ElementAccessExpression): string | number | undefined;
@@ -2632,6 +2635,8 @@ namespace ts {
 
         /* @internal */ getJsxNamespace(): string;
         /* @internal */ resolveNameAtLocation(location: Node, name: string, meaning: SymbolFlags): Symbol | undefined;
+
+        /* @internal */ createSignatureInstantiation(signature: Signature, typeArguments: Type[]): Signature;
     }
 
     export enum NodeBuilderFlags {

@@ -31,7 +31,7 @@
 
 goTo.marker('1');
 verify.currentParameterHelpArgumentNameIs("n");
-goTo.marker('2');
+/*goTo.marker('2');
 verify.currentParameterHelpArgumentNameIs("n");
 goTo.marker('3');
 verify.currentParameterHelpArgumentNameIs("n");
@@ -41,3 +41,4 @@ goTo.marker('5');
 verify.currentParameterHelpArgumentNameIs("x");
 goTo.marker('6');
 verify.currentParameterHelpArgumentNameIs("x");
+*/

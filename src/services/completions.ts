@@ -229,10 +229,21 @@ namespace ts.Completions {
         const entries: CompletionEntry[] = [];
         const uniques = createMap<true>();
 
-        typeChecker.getResolvedSignature(argumentInfo.invocation, candidates);
+        //resolvedSignature may be an instantiated generic signature.
+        const resolvedSignature = typeChecker.getResolvedSignature(argumentInfo.invocation, candidates);
+        const resolvedSignatureIsUnknown = typeChecker.isUnknownSignature(resolvedSignature);
+
+        if (!resolvedSignatureIsUnknown) foo(resolvedSignature);
 
         for (const candidate of candidates) {
-            addStringLiteralCompletionsFromType(typeChecker.getParameterType(candidate, argumentInfo.argumentIndex), entries, typeChecker, uniques);
+            if (resolvedSignatureIsUnknown || candidate !== resolvedSignature) {
+                foo(candidate);
+            }
+        }
+
+        function foo(sig: Signature) { //name
+            const type = typeChecker.getParameterType(sig, argumentInfo.argumentIndex);
+            addStringLiteralCompletionsFromType(type, entries, typeChecker, uniques);
         }
 
         if (entries.length) {

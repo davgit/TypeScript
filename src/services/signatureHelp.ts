@@ -29,17 +29,15 @@ namespace ts.SignatureHelp {
         }
 
         const argumentInfo = getContainingArgumentInfo(startingToken, position, sourceFile);
+        if (!argumentInfo) return undefined;
 
         cancellationToken.throwIfCancellationRequested();
 
         // Semantic filtering of signature help
-        if (!argumentInfo) {
-            return undefined;
-        }
-
         const call = argumentInfo.invocation;
         const candidates = <Signature[]>[];
         const resolvedSignature = typeChecker.getResolvedSignature(call, candidates);
+
         cancellationToken.throwIfCancellationRequested();
 
         if (!candidates.length) {
@@ -138,26 +136,24 @@ namespace ts.SignatureHelp {
             //   - Between the type arguments and the arguments (greater than token)
             //   - On the target of the call (parent.func)
             //   - On the 'new' keyword in a 'new' expression
-            const listItemInfo = findListItemInfo(node);
-            if (listItemInfo) {
-                const list = listItemInfo.list;
-                const isTypeArgList = callExpression.typeArguments && callExpression.typeArguments.pos === list.pos;
+            const list = findContainingList(node);
+            if (!list) return undefined;
 
-                const argumentIndex = getArgumentIndex(list, node);
-                const argumentCount = getArgumentCount(list);
+            const isTypeArgList = callExpression.typeArguments && callExpression.typeArguments.pos === list.pos;
 
-                Debug.assert(argumentIndex === 0 || argumentIndex < argumentCount,
-                    `argumentCount < argumentIndex, ${argumentCount} < ${argumentIndex}`);
+            const argumentIndex = getArgumentIndex(list, node);
+            const argumentCount = getArgumentCount(list);
 
-                return {
-                    kind: isTypeArgList ? ArgumentListKind.TypeArguments : ArgumentListKind.CallArguments,
-                    invocation: callExpression,
-                    argumentsSpan: getApplicableSpanForArguments(list, sourceFile),
-                    argumentIndex: argumentIndex,
-                    argumentCount: argumentCount
-                };
-            }
-            return undefined;
+            Debug.assert(argumentIndex === 0 || argumentIndex < argumentCount,
+                `argumentCount < argumentIndex, ${argumentCount} < ${argumentIndex}`);
+
+            return {
+                kind: isTypeArgList ? ArgumentListKind.TypeArguments : ArgumentListKind.CallArguments,
+                invocation: callExpression,
+                argumentsSpan: getApplicableSpanForArguments(list, sourceFile),
+                argumentIndex: argumentIndex,
+                argumentCount: argumentCount
+            };
         }
         else if (node.kind === SyntaxKind.NoSubstitutionTemplateLiteral && node.parent.kind === SyntaxKind.TaggedTemplateExpression) {
             // Check if we're actually inside the template;
@@ -398,11 +394,24 @@ namespace ts.SignatureHelp {
         const applicableSpan = argumentListInfo.argumentsSpan;
         const isTypeParameterList = argumentListInfo.kind === ArgumentListKind.TypeArguments;
 
+        // argumentCount is the *apparent* number of arguments.
+        const argumentCount = argumentListInfo.argumentCount; //inline?
+
+        let selectedItemIndex = candidates.indexOf(bestSignature);
+        if (selectedItemIndex < 0) {
+            selectedItemIndex = selectBestInvalidOverloadIndex(candidates, argumentCount);
+        }
+
         const invocation = argumentListInfo.invocation;
         const callTarget = getInvokedExpression(invocation);
         const callTargetSymbol = typeChecker.getSymbolAtLocation(callTarget);
         const callTargetDisplayParts = callTargetSymbol && symbolToDisplayParts(typeChecker, callTargetSymbol, /*enclosingDeclaration*/ undefined, /*meaning*/ undefined);
-        const items: SignatureHelpItem[] = map(candidates, candidateSignature => {
+        const items: SignatureHelpItem[] = map(candidates, (candidateSignature, index) => {
+            if (index === selectedItemIndex) {
+                // `bestSignature` may be instantiated, so use that instead of the generic `candidateSignature`.
+                candidateSignature = bestSignature;
+            }
+
             let signatureHelpParameters: SignatureHelpParameter[];
             const prefixDisplayParts: SymbolDisplayPart[] = [];
             const suffixDisplayParts: SymbolDisplayPart[] = [];
@@ -450,15 +459,6 @@ namespace ts.SignatureHelp {
         });
 
         const argumentIndex = argumentListInfo.argumentIndex;
-
-        // argumentCount is the *apparent* number of arguments.
-        const argumentCount = argumentListInfo.argumentCount;
-
-        let selectedItemIndex = candidates.indexOf(bestSignature);
-        if (selectedItemIndex < 0) {
-            selectedItemIndex = selectBestInvalidOverloadIndex(candidates, argumentCount);
-        }
-
         Debug.assert(argumentIndex === 0 || argumentIndex < argumentCount, `argumentCount < argumentIndex, ${argumentCount} < ${argumentIndex}`);
 
         return {

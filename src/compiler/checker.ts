@@ -82,6 +82,7 @@ namespace ts {
             isUndefinedSymbol: symbol => symbol === undefinedSymbol,
             isArgumentsSymbol: symbol => symbol === argumentsSymbol,
             isUnknownSymbol: symbol => symbol === unknownSymbol,
+            isUnknownSignature: signature => signature === unknownSignature,
             getMergedSymbol,
             getDiagnostics,
             getGlobalDiagnostics,
@@ -215,6 +216,7 @@ namespace ts {
                 location = getParseTreeNode(location);
                 return resolveName(location, name, meaning, /*nameNotFoundMessage*/ undefined, name);
             },
+            createSignatureInstantiation,
         };
 
         const tupleTypes: GenericType[] = [];
@@ -6561,6 +6563,7 @@ namespace ts {
             return instantiation;
         }
 
+        //!
         function createSignatureInstantiation(signature: Signature, typeArguments: Type[]): Signature {
             return instantiateSignature(signature, createTypeMapper(signature.typeParameters, typeArguments), /*eraseTypeParameters*/ true);
         }
